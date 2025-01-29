@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # URL de la API
-API_URL = "https://apisheetsdb.vercel.app/api/sheets"  # Usando tu API correcta
+API_URL = "https://apisheetsdb.vercel.app/api/sheets"  # Usando la URL de tu API
 
 # Información de inicio de sesión del administrador
 ADMIN_USERNAME = "administrador"
@@ -15,6 +15,7 @@ def fetch_data():
 
 # Función para actualizar el estado de un usuario
 def update_user_state(dni, new_state):
+    # El rango donde se encuentra el estado (esto depende de la estructura de tu hoja)
     response = requests.put(API_URL, json={
         "range": "A2:Z100",  # Asegúrate de que el rango de la hoja sea correcto
         "values": [[new_state]]  # Actualiza solo el estado (en la columna correspondiente)
@@ -46,27 +47,55 @@ if not st.session_state.logged_in:
 else:
     st.title("Panel de Administración")
 
-    # Filtro para seleccionar un usuario
-    dni = st.text_input("Ingrese el DNI del usuario")
+    # Filtros para filtrar por DNI, nombre y estado
+    st.sidebar.header("Filtros")
+    
+    dni_filter = st.sidebar.text_input("Filtrar por DNI")
+    name_filter = st.sidebar.text_input("Filtrar por Nombre")
+    state_filter = st.sidebar.selectbox("Filtrar por Estado", ["Todos", "Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
 
-    if dni:
-        # Obtener los datos del usuario
-        data = fetch_data()
-        user_data = [row for row in data if row[2] == dni]  # Filtra por DNI
+    # Obtener los datos del usuario
+    data = fetch_data()
 
-        if user_data:
-            user = user_data[0]
-            st.write("Datos del Usuario:")
+    # Filtrar los datos basados en los filtros
+    filtered_data = []
+    for row in data:
+        if dni_filter and dni_filter not in row[2]:
+            continue
+        if name_filter and name_filter.lower() not in row[0].lower():
+            continue
+        if state_filter != "Todos" and state_filter != row[12]:  # Asegúrate de que esta columna corresponda al estado
+            continue
+        filtered_data.append(row)
+
+    if filtered_data:
+        for user in filtered_data:
+            st.subheader(f"Detalles del Usuario: {user[0]}")
+
+            # Mostrar detalles del usuario
             st.write(f"Nombre: {user[0]}")
             st.write(f"Celular: {user[1]}")
             st.write(f"DNI: {user[2]}")
-            st.write(f"Estado: {user[12]}")  # Asegúrate de que esta columna corresponda al estado
-            
+            st.write(f"Fecha de nacimiento: {user[3]}")
+            st.write(f"Tipo de empleo: {user[4]}")
+            st.write(f"RUC de empresa: {user[5]}")
+            st.write(f"En planilla: {user[6]}")
+            st.write(f"En Infocorp: {user[7]}")
+            st.write(f"Monto del préstamo: {user[8]}")
+            st.write(f"Monto de cuota: {user[9]}")
+            st.write(f"Frecuencia de pago: {user[10]}")
+            st.write(f"Plazo de préstamo: {user[11]}")
+            st.write(f"Estado: {user[12]}")
+            st.write(f"Razón de rechazo: {user[13]}")
+            st.write(f"Contraseña: {user[14]}")
+            st.write(f"Créditos pagados: {user[15]}")
+            st.write(f"Datos: {user[16]}")
+
             # Opción para actualizar el estado
             new_state = st.selectbox("Seleccionar nuevo estado", ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
             
-            if st.button("Actualizar Estado"):
-                result = update_user_state(dni, new_state)
-                st.write("Estado actualizado:", result)
-        else:
-            st.write("Usuario no encontrado")
+            if st.button(f"Actualizar estado de {user[0]}"):
+                result = update_user_state(user[2], new_state)
+                st.write(f"Estado actualizado: {result}")
+    else:
+        st.write("No se encontraron usuarios con los filtros seleccionados.")
