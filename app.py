@@ -1,8 +1,8 @@
 import streamlit as st
 import requests
 
-# URL de la API
-API_URL = "https://apisheetsdb.vercel.app/api/sheets"  # Usando la URL de tu API
+# URL de la API de SheetsDB
+API_URL = "https://apisheetsdb.vercel.app/api/sheets"
 
 # Información de inicio de sesión del administrador
 ADMIN_USERNAME = "administrador"
@@ -83,3 +83,5 @@ else:
             st.write(f"Datos: {user[16]}")
     else:
         st.write("No se encontraron usuarios con los filtros seleccionados.")
+
+
