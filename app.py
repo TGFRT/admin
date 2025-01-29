@@ -37,7 +37,7 @@ def fetch_data():
 # Función para actualizar el estado en Google Sheets (usando el formato adecuado)
 def update_user_state(dni, new_state):
     # Crear el cuerpo de la solicitud para actualizar la fila específica
-    url = "https://tu-proyecto.vercel.app/api/sheets"
+    url = "https://apisheetsdb.vercel.app/api/sheets"  # URL correcta de la API
     
     # Obtener los datos de la API
     data = fetch_data()
