@@ -18,8 +18,15 @@ def fetch_data():
         if response.status_code == 200:
             data = response.json()["data"]  # Extraer solo los datos
 
-            # Convertir en DataFrame asegurando que la primera fila sea el encabezado
-            df = pd.DataFrame(data[1:], columns=data[0])
+            # Obtener la primera fila como encabezados
+            headers = data[0]
+            records = data[1:]
+
+            # Asegurar que cada fila tenga la misma cantidad de columnas que los encabezados
+            fixed_data = [row + [None] * (len(headers) - len(row)) for row in records]
+
+            # Convertir a DataFrame
+            df = pd.DataFrame(fixed_data, columns=headers)
 
             return df
         else:
@@ -29,7 +36,7 @@ def fetch_data():
         st.error(f"Error en la solicitud: {e}")
         return pd.DataFrame()
 
-# Mostrar detalles del usuario
+# Mostrar detalles del usuario en una ventana emergente
 def show_user_details(user):
     with st.expander(f"📌 {user['nombreCompleto']} - {user['dni']}"):
         st.write(f"📞 **Teléfono:** {user['numeroCelular']}")
