@@ -16,7 +16,7 @@ def fetch_data():
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            data = response.json()["data"]  # Extraer solo los datos
+            data = response.json()["data"]
             headers = data[0]  # La primera fila es el encabezado
             records = data[1:]  # Datos sin encabezados
 
@@ -46,31 +46,21 @@ def update_user_state(dni, new_state):
     response = requests.post(update_url, json=payload)
 
     if response.status_code == 200:
-        st.success(f"Estado actualizado correctamente a {new_state}")
+        st.success(f"✅ Estado actualizado correctamente a **{new_state}**")
     else:
-        st.error("Error al actualizar el estado")
+        st.error(f"❌ Error al actualizar el estado: {response.text}")
 
 # Mostrar detalles del usuario con opción para editar estado
 def show_user_details(user):
     with st.expander(f"📌 {user['nombreCompleto']} - {user['dni']}"):
         st.write(f"📞 **Teléfono:** {user['numeroCelular']}")
-        st.write(f"🎂 **Fecha de Nacimiento:** {user['fechaNacimiento']}")
-        st.write(f"💼 **Tipo de Empleo:** {user['tipoEmpleo']}")
-        st.write(f"🏢 **RUC Empresa:** {user['rucEmpresa']}")
-        st.write(f"📜 **En Planilla:** {user['enPlanilla']}")
-        st.write(f"⚠️ **En Infocorp:** {user['enInfocorp']}")
         st.write(f"💰 **Monto Préstamo:** S/. {user['montoPrestamo']}")
-        st.write(f"📅 **Frecuencia de Pago:** {user['frecuenciaPago']}")
-        st.write(f"⏳ **Plazo Préstamo:** {user['plazoPrestamo']} meses")
-        
-        # Mostrar estado actual y permitir modificarlo
-        current_state = user["estado"]
-        st.write(f"📊 **Estado Actual:** {current_state}")
-        
+        st.write(f"📜 **Estado Actual:** {user['estado']}")
+
         new_state = st.selectbox(
             "Cambiar Estado",
             ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"],
-            index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(current_state) if current_state in ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"] else 0
+            index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(user["estado"]) if user["estado"] in ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"] else 0
         )
 
         if st.button(f"Actualizar Estado de {user['nombreCompleto']}"):
@@ -80,11 +70,9 @@ def show_user_details(user):
 def admin_dashboard():
     st.title("📊 Panel de Administración")
 
-    # Cargar datos
     data = fetch_data()
 
     if not data.empty:
-        # Filtros después del inicio de sesión
         st.subheader("🔍 Filtros de búsqueda")
         col1, col2, col3 = st.columns(3)
 
@@ -112,7 +100,7 @@ def admin_dashboard():
 def login_sidebar():
     st.sidebar.title("Iniciar sesión")
     username = st.sidebar.text_input("Usuario")
-    password = st.sidebar.text_input("Contraseña", type="password", help="Ingresa tu contraseña")
+    password = st.sidebar.text_input("Contraseña", type="password")
 
     if st.sidebar.button("Ingresar"):
         if check_credentials(username, password):
