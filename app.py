@@ -75,13 +75,27 @@ def update_user_state(dni, new_state):
 def show_user_details(user):
     with st.expander(f"📌 {user['nombreCompleto']} - {user['dni']}"):
         st.write(f"📞 **Teléfono:** {user['numeroCelular']}")
-        st.write(f"💰 **Monto Préstamo:** S/. {user['montoPrestamo']}")
+        st.write(f"🗓️ **Fecha de Nacimiento:** {user['fechaNacimiento']}")
+        st.write(f"💼 **Tipo de Empleo:** {user['tipoEmpleo']}")
+        st.write(f"🏢 **RUC de la Empresa:** {user['rucEmpresa']}")
+        st.write(f"💳 **En Planilla:** {user['enPlanilla']}")
+        st.write(f"📋 **En Infocorp:** {user['enInfocorp']}")
+        st.write(f"💰 **Monto del Préstamo:** {user['montoPrestamo']}")
+        st.write(f"💸 **Monto de la Cuota:** {user['montoCuota']}")
+        st.write(f"⏳ **Frecuencia de Pago:** {user['frecuenciaPago']}")
+        st.write(f"🗓️ **Plazo del Préstamo:** {user['plazoPrestamo']}")
         st.write(f"📜 **Estado Actual:** {user['estado']}")
+        st.write(f"📝 **Razón de Rechazo:** {user['razonRechazo']}")
+        st.write(f"🔒 **Contraseña:** {user['contrasena']}")
+        st.write(f"✔️ **Créditos Pagados:** {user['creditos pagados']}")
+        st.write(f"📑 **Datos Adicionales:** {user['datos']}")
 
+        # Asignar un key único usando el DNI
         new_state = st.selectbox(
             "Cambiar Estado",
             ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"],
-            index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(user["estado"]) if user["estado"] in ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"] else 0
+            index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(user["estado"]) if user["estado"] in ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"] else 0,
+            key=f"estado_{user['dni']}"  # Usar el DNI del usuario como clave única
         )
 
         if st.button(f"Actualizar Estado de {user['nombreCompleto']}"):
