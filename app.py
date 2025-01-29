@@ -6,31 +6,25 @@ import pandas as pd
 # Contraseña encriptada
 hashed_password = bcrypt.hashpw("perupaysergiorequena".encode('utf-8'), bcrypt.gensalt())
 
-# Función para verificar las credenciales
+# Función para verificar credenciales
 def check_credentials(username, password):
     return username == "administrador" and bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
-# Sidebar para el inicio de sesión
-def login_sidebar():
-    st.sidebar.title("Iniciar sesión")
-    username = st.sidebar.text_input("Usuario")
-    password = st.sidebar.text_input("Contraseña", type="password")
-
-    if st.sidebar.button("Ingresar"):
-        if check_credentials(username, password):
-            st.session_state.authenticated = True
-            st.sidebar.success("Inicio de sesión exitoso")
-        else:
-            st.sidebar.error("Usuario o contraseña incorrectos")
-
-# Función para obtener los datos de la API
+# Función para obtener datos de la API
 def fetch_data():
     url = "https://apisheetsdb.vercel.app/api/sheets?range=A1:Z100"
     try:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            return pd.DataFrame(data)
+            df = pd.DataFrame(data)
+            
+            # Verificar si la columna "estado" existe
+            if "estado" not in df.columns:
+                st.error("Error: La columna 'estado' no se encuentra en los datos.")
+                return pd.DataFrame()
+            
+            return df
         else:
             st.error(f"Error al obtener datos: {response.status_code}")
             return pd.DataFrame()
@@ -38,7 +32,7 @@ def fetch_data():
         st.error(f"Error en la solicitud: {e}")
         return pd.DataFrame()
 
-# Función para mostrar detalles de un usuario
+# Mostrar detalles del usuario
 def show_user_details(user):
     with st.expander(f"📌 {user['nombreCompleto']} - {user['dni']}"):
         st.write(f"📞 **Teléfono:** {user['numeroCelular']}")
@@ -51,24 +45,28 @@ def show_user_details(user):
         st.write(f"📅 **Frecuencia de Pago:** {user['frecuenciaPago']}")
         st.write(f"⏳ **Plazo Préstamo:** {user['plazoPrestamo']} meses")
         st.write(f"📊 **Estado:** {user['estado']}")
-        if user["estado"] == "Rechazado":
+        
+        if user["estado"] == "Denegado":
             st.write(f"❌ **Razón de Rechazo:** {user['razonRechazo']}")
+        
         st.write(f"✅ **Créditos Pagados:** {user['creditos pagados']}")
         st.write(f"📄 **Datos adicionales:** {user['datos']}")
 
-# Panel de administración con filtros
+# Dashboard de administración con filtros
 def admin_dashboard():
     st.title("📊 Panel de Administración")
-    
+
     # Cargar datos
     data = fetch_data()
 
     if not data.empty:
-        # Barra de búsqueda y filtros
-        st.sidebar.subheader("🔍 Filtros de búsqueda")
-        dni_filter = st.sidebar.text_input("Buscar por DNI")
-        name_filter = st.sidebar.text_input("Buscar por Nombre")
-        state_filter = st.sidebar.selectbox("Filtrar por Estado", ["Todos"] + data["estado"].unique().tolist())
+        # Filtros después del inicio de sesión
+        st.subheader("🔍 Filtros de búsqueda")
+        col1, col2, col3 = st.columns(3)
+
+        dni_filter = col1.text_input("Buscar por DNI")
+        name_filter = col2.text_input("Buscar por Nombre")
+        state_filter = col3.selectbox("Filtrar por Estado", ["Todos", "Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
 
         # Aplicar filtros
         filtered_data = data
@@ -85,6 +83,19 @@ def admin_dashboard():
             show_user_details(user)
     else:
         st.warning("No se encontraron datos.")
+
+# Sidebar para el inicio de sesión
+def login_sidebar():
+    st.sidebar.title("Iniciar sesión")
+    username = st.sidebar.text_input("Usuario")
+    password = st.sidebar.text_input("Contraseña", type="password")
+
+    if st.sidebar.button("Ingresar"):
+        if check_credentials(username, password):
+            st.session_state.authenticated = True
+            st.sidebar.success("Inicio de sesión exitoso")
+        else:
+            st.sidebar.error("Usuario o contraseña incorrectos")
 
 # Lógica principal
 def main():
