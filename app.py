@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import pandas as pd
 
 # URL de la API de SheetsDB
 API_URL = "https://apisheetsdb.vercel.app/api/sheets"
@@ -83,5 +84,3 @@ else:
             st.write(f"Datos: {user[16]}")
     else:
         st.write("No se encontraron usuarios con los filtros seleccionados.")
-
-
