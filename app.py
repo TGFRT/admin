@@ -64,12 +64,18 @@ def update_user_state(dni, new_state):
         try:
             response = requests.post(url, json=updated_data)
             response.raise_for_status()  # Esto lanzará una excepción si el código de estado es 4xx o 5xx
+            
+            # Imprimir el código de estado y la respuesta completa para verificar la actualización
+            st.write(response.status_code)
+            st.write(response.json())  # Imprimir los detalles de la respuesta
+
             st.success(f"✅ Estado actualizado correctamente a **{new_state}** para {dni}")
         except requests.exceptions.RequestException as e:
             # Mostrar detalles completos del error
             st.error(f"❌ Error al actualizar el estado: {e}")
-            st.write("Detalles de la respuesta de la API:")
-            st.write(response.text)  # Imprime la respuesta completa de la API
+            if response.status_code != 200:
+                st.write("Detalles de la respuesta de la API:")
+                st.write(response.text)  # Imprime la respuesta completa de la API
 
 # Mostrar detalles del usuario con opción para editar estado
 def show_user_details(user):
@@ -160,4 +166,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
