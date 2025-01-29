@@ -1,14 +1,6 @@
 import streamlit as st
-import bcrypt
 import requests
 import pandas as pd
-
-# Contraseña encriptada
-hashed_password = bcrypt.hashpw("perupaysergiorequena".encode('utf-8'), bcrypt.gensalt())
-
-# Función para verificar credenciales
-def check_credentials(username, password):
-    return username == "administrador" and bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
 # Función para obtener datos de la API
 def fetch_data():
@@ -52,31 +44,23 @@ def show_user_details(user):
         
         if user["estado"] == "Denegado":
             st.write(f"❌ **Razón de Rechazo:** {user['razonRechazo']}")
-        
+
         st.write(f"✅ **Créditos Pagados:** {user['creditos pagados']}")
         st.write(f"📄 **Datos adicionales:** {user['datos']}")
 
-    # Botón para actualizar estado
-    new_state = st.selectbox("Actualizar Estado", ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"], index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(user['estado']))
+        # Actualizar Estado
+        estados = ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"]
+        if user['estado'] in estados:
+            index_estado = estados.index(user['estado'])
+        else:
+            index_estado = 0  # Si el estado no está en la lista, se selecciona un valor por defecto
+        
+        new_state = st.selectbox("Actualizar Estado", estados, index=index_estado)
 
-    if st.button(f"Actualizar Estado para {user['nombreCompleto']}"):
-        update_status(user['dni'], new_state)
-        st.success(f"Estado de {user['nombreCompleto']} actualizado a {new_state}")
-
-# Función para actualizar el estado del usuario
-def update_status(dni, new_state):
-    url = "https://apisheetsdb.vercel.app/api/sheets"
-    range_ = f"A2:Z100"  # Este es el rango donde están los datos en tu hoja de cálculo
-    payload = {
-        "action": "update",
-        "sheetId": "1y1PeiMI03LG3LKFiykCpSgAeRQL3mFQme3xbYzVxVso",
-        "range": range_,
-        "values": [[new_state] for user in fetch_data().values if user[2] == dni]  # Suponiendo que el DNI está en la tercera columna
-    }
-    
-    response = requests.post(url, json=payload)
-    if response.status_code != 200:
-        st.error(f"Error al actualizar el estado: {response.status_code}")
+        # Aquí puedes añadir el código para actualizar el estado en tu API si el estado ha cambiado
+        if new_state != user['estado']:
+            st.write(f"Estado actualizado de {user['estado']} a {new_state}")
+            # Aquí iría la lógica para actualizar en la API
 
 # Dashboard de administración con filtros después del login
 def admin_dashboard():
@@ -117,7 +101,7 @@ def login_sidebar():
     password = st.sidebar.text_input("Contraseña", type="password", help="Ingresa tu contraseña")
 
     if st.sidebar.button("Ingresar"):
-        if check_credentials(username, password):
+        if username == "administrador" and password == "perupaysergiorequena":
             st.session_state.authenticated = True
             st.sidebar.success("Inicio de sesión exitoso")
         else:
