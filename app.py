@@ -1,86 +1,120 @@
 import streamlit as st
+import bcrypt
 import requests
 import pandas as pd
 
-# URL de la API de SheetsDB
-API_URL = "https://apisheetsdb.vercel.app/api/sheets"
+# Contraseña encriptada
+hashed_password = bcrypt.hashpw("perupaysergiorequena".encode('utf-8'), bcrypt.gensalt())
 
-# Información de inicio de sesión del administrador
-ADMIN_USERNAME = "administrador"
-ADMIN_PASSWORD = "perupaysergiorequena"
+# Función para verificar credenciales
+def check_credentials(username, password):
+    return username == "administrador" and bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
-# Función para obtener los datos de la API
+# Función para obtener datos de la API
 def fetch_data():
-    response = requests.get(f"{API_URL}?range=A1:Z100")
-    return response.json().get("data", [])
+    url = "https://apisheetsdb.vercel.app/api/sheets?range=A1:Z100"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()["data"]  # Extraer solo los datos
 
-# Función de inicio de sesión
-def login():
-    st.sidebar.title("Iniciar sesión")
-    username = st.sidebar.text_input("Usuario")
-    password = st.sidebar.text_input("Contraseña", type="password")
+            # Obtener la primera fila como encabezados
+            headers = data[0]
+            records = data[1:]
 
-    if st.sidebar.button("Iniciar sesión"):
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-            st.session_state.logged_in = True
-            st.sidebar.success("¡Inicio de sesión exitoso!")
+            # Asegurar que cada fila tenga la misma cantidad de columnas que los encabezados
+            fixed_data = [row + [None] * (len(headers) - len(row)) for row in records]
+
+            # Convertir a DataFrame
+            df = pd.DataFrame(fixed_data, columns=headers)
+
+            return df
         else:
-            st.sidebar.error("Usuario o contraseña incorrectos.")
+            st.error(f"Error al obtener datos: {response.status_code}")
+            return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error en la solicitud: {e}")
+        return pd.DataFrame()
 
-# Verificar si el usuario está autenticado
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
+# Mostrar detalles del usuario en una ventana emergente
+def show_user_details(user):
+    with st.expander(f"📌 {user['nombreCompleto']} - {user['dni']}"):
+        st.write(f"📞 **Teléfono:** {user['numeroCelular']}")
+        st.write(f"🎂 **Fecha de Nacimiento:** {user['fechaNacimiento']}")
+        st.write(f"💼 **Tipo de Empleo:** {user['tipoEmpleo']}")
+        st.write(f"🏢 **RUC Empresa:** {user['rucEmpresa']}")
+        st.write(f"📜 **En Planilla:** {user['enPlanilla']}")
+        st.write(f"⚠️ **En Infocorp:** {user['enInfocorp']}")
+        st.write(f"💰 **Monto Préstamo:** S/. {user['montoPrestamo']}")
+        st.write(f"📅 **Frecuencia de Pago:** {user['frecuenciaPago']}")
+        st.write(f"⏳ **Plazo Préstamo:** {user['plazoPrestamo']} meses")
+        st.write(f"📊 **Estado:** {user['estado']}")
+        
+        if user["estado"] == "Denegado":
+            st.write(f"❌ **Razón de Rechazo:** {user['razonRechazo']}")
+        
+        st.write(f"✅ **Créditos Pagados:** {user['creditos pagados']}")
+        st.write(f"📄 **Datos adicionales:** {user['datos']}")
 
-# Si el usuario no está autenticado, mostrar el formulario de inicio de sesión
-if not st.session_state.logged_in:
-    login()
+# Dashboard de administración con filtros después del login
+def admin_dashboard():
+    st.title("📊 Panel de Administración")
 
-# Si el usuario está autenticado, mostrar el dashboard
-else:
-    st.title("Panel de Administración")
-
-    # Filtros para filtrar por DNI, nombre y estado
-    st.sidebar.header("Filtros")
-    
-    dni_filter = st.sidebar.text_input("Filtrar por DNI")
-    name_filter = st.sidebar.text_input("Filtrar por Nombre")
-    state_filter = st.sidebar.selectbox("Filtrar por Estado", ["Todos", "Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
-
-    # Obtener los datos del usuario
+    # Cargar datos
     data = fetch_data()
 
-    # Filtrar los datos basados en los filtros
-    filtered_data = []
-    for row in data:
-        if dni_filter and dni_filter not in row[2]:
-            continue
-        if name_filter and name_filter.lower() not in row[0].lower():
-            continue
-        if state_filter != "Todos" and state_filter != row[12]:  # Asegúrate de que esta columna corresponda al estado
-            continue
-        filtered_data.append(row)
+    if not data.empty:
+        # Filtros después del inicio de sesión
+        st.subheader("🔍 Filtros de búsqueda")
+        col1, col2, col3 = st.columns(3)
 
-    if filtered_data:
-        for user in filtered_data:
-            st.subheader(f"Detalles del Usuario: {user[0]}")
+        dni_filter = col1.text_input("Buscar por DNI")
+        name_filter = col2.text_input("Buscar por Nombre")
+        state_filter = col3.selectbox("Filtrar por Estado", ["Todos", "Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
 
-            # Mostrar detalles del usuario
-            st.write(f"Nombre: {user[0]}")
-            st.write(f"Celular: {user[1]}")
-            st.write(f"DNI: {user[2]}")
-            st.write(f"Fecha de nacimiento: {user[3]}")
-            st.write(f"Tipo de empleo: {user[4]}")
-            st.write(f"RUC de empresa: {user[5]}")
-            st.write(f"En planilla: {user[6]}")
-            st.write(f"En Infocorp: {user[7]}")
-            st.write(f"Monto del préstamo: {user[8]}")
-            st.write(f"Monto de cuota: {user[9]}")
-            st.write(f"Frecuencia de pago: {user[10]}")
-            st.write(f"Plazo de préstamo: {user[11]}")
-            st.write(f"Estado: {user[12]}")
-            st.write(f"Razón de rechazo: {user[13]}")
-            st.write(f"Contraseña: {user[14]}")
-            st.write(f"Créditos pagados: {user[15]}")
-            st.write(f"Datos: {user[16]}")
+        # Aplicar filtros
+        filtered_data = data
+        if dni_filter:
+            filtered_data = filtered_data[filtered_data["dni"].astype(str).str.contains(dni_filter, case=False, na=False)]
+        if name_filter:
+            filtered_data = filtered_data[filtered_data["nombreCompleto"].str.contains(name_filter, case=False, na=False)]
+        if state_filter != "Todos":
+            filtered_data = filtered_data[filtered_data["estado"] == state_filter]
+
+        # Mostrar resultados filtrados
+        st.subheader(f"Resultados ({len(filtered_data)})")
+        for _, user in filtered_data.iterrows():
+            show_user_details(user)
     else:
-        st.write("No se encontraron usuarios con los filtros seleccionados.")
+        st.warning("No se encontraron datos.")
+
+# Sidebar para el inicio de sesión
+def login_sidebar():
+    st.sidebar.title("Iniciar sesión")
+    username = st.sidebar.text_input("Usuario")
+    password = st.sidebar.text_input("Contraseña", type="password", help="Ingresa tu contraseña")
+
+    if st.sidebar.button("Ingresar"):
+        if check_credentials(username, password):
+            st.session_state.authenticated = True
+            st.sidebar.success("Inicio de sesión exitoso")
+        else:
+            st.sidebar.error("Usuario o contraseña incorrectos")
+
+# Lógica principal
+def main():
+    st.set_page_config(page_title="Admin Dashboard", layout="wide")
+
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    login_sidebar()
+
+    if st.session_state.authenticated:
+        admin_dashboard()
+    else:
+        st.warning("Por favor, inicia sesión en la barra lateral.")
+
+if __name__ == "__main__":
+    main()
+
