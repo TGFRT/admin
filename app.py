@@ -2,161 +2,89 @@ import streamlit as st
 import requests
 import pandas as pd
 
-# Función para obtener datos de la API
+# URL de la API de Google Sheets
+API_URL = 'https://apisheetsdb.vercel.app/api/sheets'
+
+# Obtener datos de la hoja de Google Sheets
 def fetch_data():
-    url = "https://apisheetsdb.vercel.app/api/sheets?range=A1:Z100"
-    try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()["data"]
-            headers = data[0]  # La primera fila es el encabezado
-            records = data[1:]  # Datos sin encabezados
+    response = requests.get(f'{API_URL}?range=A1:O100')
+    if response.status_code == 200:
+        return response.json()['data']
+    else:
+        st.error('Error al obtener los datos.')
+        return []
 
-            # Asegurar que cada fila tenga el mismo número de columnas
-            fixed_data = [row + [None] * (len(headers) - len(row)) for row in records]
+# Actualizar el estado de un usuario
+def update_user_state(range, values):
+    response = requests.put(API_URL, json={
+        "range": range,
+        "values": values
+    })
+    if response.status_code == 200:
+        st.success("Estado actualizado exitosamente")
+    else:
+        st.error("Error al actualizar el estado")
 
-            # Convertir a DataFrame
-            df = pd.DataFrame(fixed_data, columns=headers)
-
-            return df
-        else:
-            st.error(f"Error al obtener datos: {response.status_code}")
-            return pd.DataFrame()
-    except Exception as e:
-        st.error(f"Error en la solicitud: {e}")
-        return pd.DataFrame()
-
-# Función para actualizar el estado en Google Sheets
-def update_user_state(dni, new_state):
-    url = "https://apisheetsdb.vercel.app/api/sheets"  # URL correcta de la API
-    
-    # Obtener los datos de la API
-    data = fetch_data()
-    if not data.empty:
-        user_row = data[data['dni'] == str(dni)]
-        if user_row.empty:
-            st.error("No se encontró el usuario con ese DNI.")
-            return
-        
-        # Obtener el índice de la fila a actualizar
-        row_index = user_row.index[0] + 2  # Las filas en Google Sheets empiezan desde 1, pero la API usa un índice base 1
-        
-        # Crear el cuerpo de la solicitud con los nuevos datos
-        updated_data = {
-            "action": "update",
-            "sheetId": "1y1PeiMI03LG3LKFiykCpSgAeRQL3mFQme3xbYzVxVso",  # ID de la hoja correcto
-            "range": f"'Hoja 1'!A{row_index}:O{row_index}",  # Rango específico de la fila
-            "values": [user_row.iloc[0].tolist()]  # Mantener los datos existentes, pero cambiar solo el estado
-        }
-        
-        # Actualizar el estado en la columna correspondiente
-        updated_data["values"][0][data.columns.get_loc("estado")] = new_state
-        
-        # Enviar la solicitud POST para actualizar la fila
-        try:
-            response = requests.post(url, json=updated_data)
-            response.raise_for_status()  # Esto lanzará una excepción si el código de estado es 4xx o 5xx
-            
-            # Imprimir el código de estado y la respuesta completa para verificar la actualización
-            st.write(response.status_code)
-            st.write(response.json())  # Imprimir los detalles de la respuesta
-
-            st.success(f"✅ Estado actualizado correctamente a **{new_state}** para {dni}")
-        except requests.exceptions.RequestException as e:
-            # Mostrar detalles completos del error
-            st.error(f"❌ Error al actualizar el estado: {e}")
-            if response.status_code != 200:
-                st.write("Detalles de la respuesta de la API:")
-                st.write(response.text)  # Imprime la respuesta completa de la API
-
-# Mostrar detalles del usuario con opción para editar estado
-def show_user_details(user):
-    with st.expander(f"📌 {user['nombreCompleto']} - {user['dni']}"):
-        st.write(f"📞 **Teléfono:** {user['numeroCelular']}")
-        st.write(f"🗓️ **Fecha de Nacimiento:** {user['fechaNacimiento']}")
-        st.write(f"💼 **Tipo de Empleo:** {user['tipoEmpleo']}")
-        st.write(f"🏢 **RUC de la Empresa:** {user['rucEmpresa']}")
-        st.write(f"💳 **En Planilla:** {user['enPlanilla']}")
-        st.write(f"📋 **En Infocorp:** {user['enInfocorp']}")
-        st.write(f"💰 **Monto del Préstamo:** {user['montoPrestamo']}")
-        st.write(f"💸 **Monto de la Cuota:** {user['montoCuota']}")
-        st.write(f"⏳ **Frecuencia de Pago:** {user['frecuenciaPago']}")
-        st.write(f"🗓️ **Plazo del Préstamo:** {user['plazoPrestamo']}")
-        st.write(f"📜 **Estado Actual:** {user['estado']}")
-        st.write(f"📝 **Razón de Rechazo:** {user['razonRechazo']}")
-        st.write(f"🔒 **Contraseña:** {user['contrasena']}")
-        st.write(f"✔️ **Créditos Pagados:** {user['creditos pagados']}")
-        st.write(f"📑 **Datos Adicionales:** {user['datos']}")
-
-        # Asignar un key único usando el DNI
-        new_state = st.selectbox(
-            "Cambiar Estado",
-            ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"],
-            index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(user["estado"]) if user["estado"] in ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"] else 0,
-            key=f"estado_{user['dni']}"  # Usar el DNI del usuario como clave única
-        )
-
-        if st.button(f"Actualizar Estado de {user['nombreCompleto']}"):
-            update_user_state(user["dni"], new_state)
-
-# Dashboard de administración con filtros
+# Mostrar el panel de administración
 def admin_dashboard():
-    st.title("📊 Panel de Administración")
-
     data = fetch_data()
+    if not data:
+        return
 
-    if not data.empty:
-        st.subheader("🔍 Filtros de búsqueda")
-        col1, col2, col3 = st.columns(3)
+    # Convertir los datos a un DataFrame para mejor visualización
+    df = pd.DataFrame(data[1:], columns=data[0])
 
-        dni_filter = col1.text_input("Buscar por DNI")
-        name_filter = col2.text_input("Buscar por Nombre")
-        state_filter = col3.selectbox("Filtrar por Estado", ["Todos", "Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
+    # Mostrar los datos
+    st.write(df)
 
-        # Aplicar filtros
-        filtered_data = data
-        if dni_filter:
-            filtered_data = filtered_data[filtered_data["dni"].astype(str).str.contains(dni_filter, case=False, na=False)]
-        if name_filter:
-            filtered_data = filtered_data[filtered_data["nombreCompleto"].str.contains(name_filter, case=False, na=False)]
-        if state_filter != "Todos":
-            filtered_data = filtered_data[filtered_data["estado"] == state_filter]
+    # Filtros
+    dni_filter = st.text_input("Filtrar por DNI")
+    name_filter = st.text_input("Filtrar por Nombre")
+    state_filter = st.selectbox("Filtrar por Estado", ["Todos", "Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
 
-        # Mostrar resultados filtrados
-        st.subheader(f"Resultados ({len(filtered_data)})")
-        for _, user in filtered_data.iterrows():
-            show_user_details(user)
+    # Aplicar filtros
+    filtered_data = df
+    if dni_filter:
+        filtered_data = filtered_data[filtered_data['dni'].str.contains(dni_filter)]
+    if name_filter:
+        filtered_data = filtered_data[filtered_data['nombreCompleto'].str.contains(name_filter)]
+    if state_filter != "Todos":
+        filtered_data = filtered_data[filtered_data['estado'] == state_filter]
+
+    # Mostrar datos filtrados
+    if not filtered_data.empty:
+        st.write(filtered_data)
+
+        # Seleccionar usuario para modificar su estado
+        user_to_modify = st.selectbox("Seleccionar usuario para modificar estado", filtered_data['nombreCompleto'])
+        
+        if user_to_modify:
+            # Mostrar detalles del usuario
+            user_data = filtered_data[filtered_data['nombreCompleto'] == user_to_modify].iloc[0]
+            st.write(user_data)
+
+            # Cambiar el estado
+            new_state = st.selectbox("Nuevo Estado", ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
+            
+            if st.button("Actualizar Estado"):
+                # Rango de la fila a actualizar (en este caso, 'A2:O2' es solo un ejemplo)
+                range = f"'Hoja 1'!A{filtered_data[filtered_data['nombreCompleto'] == user_to_modify].index[0] + 2}:O{filtered_data[filtered_data['nombreCompleto'] == user_to_modify].index[0] + 2}"
+                
+                # Actualizar solo la columna "estado"
+                values = [[user_data['nombreCompleto'], user_data['numeroCelular'], user_data['dni'], user_data['fechaNacimiento'], user_data['tipoEmpleo'],
+                           user_data['rucEmpresa'], user_data['enPlanilla'], user_data['enInfocorp'], user_data['montoPrestamo'], user_data['montoCuota'],
+                           user_data['frecuenciaPago'], user_data['plazoPrestamo'], new_state, user_data['razonRechazo'], user_data['contrasena'], user_data['creditos pagados'], user_data['datos']]]
+                
+                # Enviar solicitud para actualizar el estado
+                update_user_state(range, values)
     else:
-        st.warning("No se encontraron datos.")
+        st.write("No se encontraron resultados con los filtros aplicados.")
 
-# Sidebar para el inicio de sesión
-def login_sidebar():
-    st.sidebar.title("Iniciar sesión")
-    username = st.sidebar.text_input("Usuario")
-    password = st.sidebar.text_input("Contraseña", type="password")
-
-    if st.sidebar.button("Ingresar"):
-        if check_credentials(username, password):
-            st.session_state.authenticated = True
-            st.sidebar.success("Inicio de sesión exitoso")
-        else:
-            st.sidebar.error("Usuario o contraseña incorrectos")
-
-# Lógica principal
+# Mostrar el panel de administración
 def main():
-    st.set_page_config(page_title="Admin Dashboard", layout="wide")
-
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-
-    login_sidebar()
-
-    if st.session_state.authenticated:
-        admin_dashboard()
-    else:
-        st.warning("Por favor, inicia sesión en la barra lateral.")
+    st.title("Panel de Administración")
+    admin_dashboard()
 
 if __name__ == "__main__":
     main()
-
 
