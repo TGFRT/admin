@@ -39,7 +39,7 @@ def update_user_state(dni, new_state):
     # Crear el cuerpo de la solicitud para actualizar la fila específica
     url = "https://tu-proyecto.vercel.app/api/sheets"
     
-    # Encontrar la fila correspondiente al DNI del usuario
+    # Obtener los datos de la API
     data = fetch_data()
     if not data.empty:
         user_row = data[data['dni'] == str(dni)]
@@ -62,13 +62,15 @@ def update_user_state(dni, new_state):
         updated_data["values"][0][data.columns.get_loc("estado")] = new_state
         
         # Enviar la solicitud POST para actualizar la fila
-        response = requests.post(url, json=updated_data)
-        if response.status_code == 200:
+        try:
+            response = requests.post(url, json=updated_data)
+            response.raise_for_status()  # Esto lanzará una excepción si el código de estado es 4xx o 5xx
             st.success(f"✅ Estado actualizado correctamente a **{new_state}** para {dni}")
-        else:
-            st.error(f"❌ Error al actualizar el estado: {response.text}")
-    else:
-        st.error("No se encontraron datos para actualizar.")
+        except requests.exceptions.RequestException as e:
+            # Mostrar detalles completos del error
+            st.error(f"❌ Error al actualizar el estado: {e}")
+            st.write("Detalles de la respuesta de la API:")
+            st.write(response.text)  # Imprime la respuesta completa de la API
 
 # Mostrar detalles del usuario con opción para editar estado
 def show_user_details(user):
