@@ -13,15 +13,6 @@ def fetch_data():
     response = requests.get(f"{API_URL}?range=A1:Z100")
     return response.json().get("data", [])
 
-# Función para actualizar el estado de un usuario
-def update_user_state(dni, new_state):
-    # El rango donde se encuentra el estado (esto depende de la estructura de tu hoja)
-    response = requests.put(API_URL, json={
-        "range": "A2:Z100",  # Asegúrate de que el rango de la hoja sea correcto
-        "values": [[new_state]]  # Actualiza solo el estado (en la columna correspondiente)
-    })
-    return response.json()
-
 # Función de inicio de sesión
 def login():
     st.sidebar.title("Iniciar sesión")
@@ -90,12 +81,5 @@ else:
             st.write(f"Contraseña: {user[14]}")
             st.write(f"Créditos pagados: {user[15]}")
             st.write(f"Datos: {user[16]}")
-
-            # Opción para actualizar el estado
-            new_state = st.selectbox("Seleccionar nuevo estado", ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"])
-            
-            if st.button(f"Actualizar estado de {user[0]}"):
-                result = update_user_state(user[2], new_state)
-                st.write(f"Estado actualizado: {result}")
     else:
         st.write("No se encontraron usuarios con los filtros seleccionados.")
