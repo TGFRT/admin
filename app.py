@@ -36,37 +36,6 @@ def fetch_data():
         st.error(f"Error en la solicitud: {e}")
         return pd.DataFrame()
 
-# Función para actualizar el estado en la API
-def update_user_status(dni, new_state):
-    url = "https://apisheetsdb.vercel.app/api/sheets"
-    range = f"A2:Q100"  # Rango de celdas en donde se encuentran los datos, puede ajustarse según sea necesario.
-    
-    # Encuentra la fila que contiene el DNI del usuario a actualizar
-    data = fetch_data()  # Esta función carga todos los datos
-    user_row = None
-    for idx, row in data.iterrows():
-        if row['dni'] == dni:
-            user_row = idx + 2  # Las filas de Google Sheets comienzan desde 1, por lo que hay que sumar 2
-            break
-
-    if user_row is not None:
-        # Crear el cuerpo de la solicitud para actualizar solo la columna 'estado'
-        range_to_update = f"A{user_row}:Q{user_row}"  # Actualiza la fila completa, puedes ajustar el rango a las columnas necesarias
-        values = [[new_state]]  # Solo actualiza el estado
-
-        # Realizar la petición PUT a la API
-        response = requests.put(url, json={
-            "range": range_to_update,
-            "values": values
-        })
-
-        if response.status_code == 200:
-            st.success(f"Estado del usuario con DNI {dni} actualizado a {new_state}")
-        else:
-            st.error(f"Error al actualizar el estado: {response.status_code}")
-    else:
-        st.error("No se encontró el usuario con ese DNI.")
-
 # Mostrar detalles del usuario en una ventana emergente
 def show_user_details(user):
     with st.expander(f"📌 {user['nombreCompleto']} - {user['dni']}"):
@@ -83,15 +52,31 @@ def show_user_details(user):
         
         if user["estado"] == "Denegado":
             st.write(f"❌ **Razón de Rechazo:** {user['razonRechazo']}")
-
-        # Selector para cambiar el estado
-        new_state = st.selectbox("Actualizar Estado", ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"], index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(user['estado']))
-
-        if st.button(f"Actualizar estado de {user['nombreCompleto']}"):
-            update_user_status(user['dni'], new_state)
         
         st.write(f"✅ **Créditos Pagados:** {user['creditos pagados']}")
         st.write(f"📄 **Datos adicionales:** {user['datos']}")
+
+    # Botón para actualizar estado
+    new_state = st.selectbox("Actualizar Estado", ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"], index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(user['estado']))
+
+    if st.button(f"Actualizar Estado para {user['nombreCompleto']}"):
+        update_status(user['dni'], new_state)
+        st.success(f"Estado de {user['nombreCompleto']} actualizado a {new_state}")
+
+# Función para actualizar el estado del usuario
+def update_status(dni, new_state):
+    url = "https://apisheetsdb.vercel.app/api/sheets"
+    range_ = f"A2:Z100"  # Este es el rango donde están los datos en tu hoja de cálculo
+    payload = {
+        "action": "update",
+        "sheetId": "1y1PeiMI03LG3LKFiykCpSgAeRQL3mFQme3xbYzVxVso",
+        "range": range_,
+        "values": [[new_state] for user in fetch_data().values if user[2] == dni]  # Suponiendo que el DNI está en la tercera columna
+    }
+    
+    response = requests.post(url, json=payload)
+    if response.status_code != 200:
+        st.error(f"Error al actualizar el estado: {response.status_code}")
 
 # Dashboard de administración con filtros después del login
 def admin_dashboard():
