@@ -3,7 +3,7 @@ import bcrypt
 import requests
 import pandas as pd
 
-# Contraseña encriptada
+# Configurar contraseña encriptada
 hashed_password = bcrypt.hashpw("perupaysergiorequena".encode('utf-8'), bcrypt.gensalt())
 
 # Función para verificar credenciales
@@ -17,12 +17,10 @@ def fetch_data():
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()["data"]  # Extraer solo los datos
+            headers = data[0]  # La primera fila es el encabezado
+            records = data[1:]  # Datos sin encabezados
 
-            # Obtener la primera fila como encabezados
-            headers = data[0]
-            records = data[1:]
-
-            # Asegurar que cada fila tenga la misma cantidad de columnas que los encabezados
+            # Asegurar que cada fila tenga el mismo número de columnas
             fixed_data = [row + [None] * (len(headers) - len(row)) for row in records]
 
             # Convertir a DataFrame
@@ -36,7 +34,23 @@ def fetch_data():
         st.error(f"Error en la solicitud: {e}")
         return pd.DataFrame()
 
-# Mostrar detalles del usuario en una ventana emergente
+# Función para actualizar el estado en Google Sheets
+def update_user_state(dni, new_state):
+    update_url = "https://apisheetsdb.vercel.app/api/sheets/update"  # Endpoint de actualización
+
+    payload = {
+        "dni": dni,
+        "estado": new_state
+    }
+
+    response = requests.post(update_url, json=payload)
+
+    if response.status_code == 200:
+        st.success(f"Estado actualizado correctamente a {new_state}")
+    else:
+        st.error("Error al actualizar el estado")
+
+# Mostrar detalles del usuario con opción para editar estado
 def show_user_details(user):
     with st.expander(f"📌 {user['nombreCompleto']} - {user['dni']}"):
         st.write(f"📞 **Teléfono:** {user['numeroCelular']}")
@@ -48,15 +62,21 @@ def show_user_details(user):
         st.write(f"💰 **Monto Préstamo:** S/. {user['montoPrestamo']}")
         st.write(f"📅 **Frecuencia de Pago:** {user['frecuenciaPago']}")
         st.write(f"⏳ **Plazo Préstamo:** {user['plazoPrestamo']} meses")
-        st.write(f"📊 **Estado:** {user['estado']}")
         
-        if user["estado"] == "Denegado":
-            st.write(f"❌ **Razón de Rechazo:** {user['razonRechazo']}")
+        # Mostrar estado actual y permitir modificarlo
+        current_state = user["estado"]
+        st.write(f"📊 **Estado Actual:** {current_state}")
         
-        st.write(f"✅ **Créditos Pagados:** {user['creditos pagados']}")
-        st.write(f"📄 **Datos adicionales:** {user['datos']}")
+        new_state = st.selectbox(
+            "Cambiar Estado",
+            ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"],
+            index=["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"].index(current_state) if current_state in ["Denegado", "Aprobado", "Confianza", "Pendiente", "Preaprobado", "Validación"] else 0
+        )
 
-# Dashboard de administración con filtros después del login
+        if st.button(f"Actualizar Estado de {user['nombreCompleto']}"):
+            update_user_state(user["dni"], new_state)
+
+# Dashboard de administración con filtros
 def admin_dashboard():
     st.title("📊 Panel de Administración")
 
