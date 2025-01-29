@@ -16,14 +16,11 @@ def fetch_data():
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            data = response.json()
-            df = pd.DataFrame(data)
-            
-            # Verificar si la columna "estado" existe
-            if "estado" not in df.columns:
-                st.error("Error: La columna 'estado' no se encuentra en los datos.")
-                return pd.DataFrame()
-            
+            data = response.json()["data"]  # Extraer solo los datos
+
+            # Convertir en DataFrame asegurando que la primera fila sea el encabezado
+            df = pd.DataFrame(data[1:], columns=data[0])
+
             return df
         else:
             st.error(f"Error al obtener datos: {response.status_code}")
@@ -52,7 +49,7 @@ def show_user_details(user):
         st.write(f"✅ **Créditos Pagados:** {user['creditos pagados']}")
         st.write(f"📄 **Datos adicionales:** {user['datos']}")
 
-# Dashboard de administración con filtros
+# Dashboard de administración con filtros después del login
 def admin_dashboard():
     st.title("📊 Panel de Administración")
 
@@ -88,7 +85,7 @@ def admin_dashboard():
 def login_sidebar():
     st.sidebar.title("Iniciar sesión")
     username = st.sidebar.text_input("Usuario")
-    password = st.sidebar.text_input("Contraseña", type="password")
+    password = st.sidebar.text_input("Contraseña", type="password", help="Ingresa tu contraseña")
 
     if st.sidebar.button("Ingresar"):
         if check_credentials(username, password):
