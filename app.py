@@ -34,10 +34,10 @@ def fetch_data():
         st.error(f"Error en la solicitud: {e}")
         return pd.DataFrame()
 
-# Función para actualizar el estado en Google Sheets
+# Función para actualizar el estado en Google Sheets (usando el formato adecuado)
 def update_user_state(dni, new_state):
     # Crear el cuerpo de la solicitud para actualizar la fila específica
-    url = "https://apisheetsdb.vercel.app/api/sheets"
+    url = "https://tu-proyecto.vercel.app/api/sheets"
     
     # Encontrar la fila correspondiente al DNI del usuario
     data = fetch_data()
@@ -48,19 +48,21 @@ def update_user_state(dni, new_state):
             return
         
         # Obtener el índice de la fila a actualizar
-        row_index = user_row.index[0] + 1  # Las filas en Google Sheets empiezan desde 1
+        row_index = user_row.index[0] + 2  # Las filas en Google Sheets empiezan desde 1, pero la API usa un índice base 1
         
         # Crear el cuerpo de la solicitud con los nuevos datos
         updated_data = {
+            "action": "update",
+            "sheetId": "1GNHtJRX8LpvxYLjpYK780y6DwKmPcahbbmfJJUgX_MI",  # Reemplaza con tu ID de hoja
             "range": f"A{row_index}:Z{row_index}",
             "values": [user_row.iloc[0].tolist()]
         }
         
         # Actualizar el estado en la columna correspondiente
-        updated_data["values"][0][headers.index("estado")] = new_state
+        updated_data["values"][0][data.columns.get_loc("estado")] = new_state
         
         # Enviar la solicitud POST para actualizar la fila
-        response = requests.put(url, json=updated_data)
+        response = requests.post(url, json=updated_data)
         if response.status_code == 200:
             st.success(f"✅ Estado actualizado correctamente a **{new_state}** para {dni}")
         else:
