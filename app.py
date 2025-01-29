@@ -36,19 +36,37 @@ def fetch_data():
 
 # Función para actualizar el estado en Google Sheets
 def update_user_state(dni, new_state):
-    update_url = "https://apisheetsdb.vercel.app/api/sheets/update"  # Endpoint de actualización
-
-    payload = {
-        "dni": dni,
-        "estado": new_state
-    }
-
-    response = requests.post(update_url, json=payload)
-
-    if response.status_code == 200:
-        st.success(f"✅ Estado actualizado correctamente a **{new_state}**")
+    # Crear el cuerpo de la solicitud para actualizar la fila específica
+    url = "https://apisheetsdb.vercel.app/api/sheets"
+    
+    # Encontrar la fila correspondiente al DNI del usuario
+    data = fetch_data()
+    if not data.empty:
+        user_row = data[data['dni'] == str(dni)]
+        if user_row.empty:
+            st.error("No se encontró el usuario con ese DNI.")
+            return
+        
+        # Obtener el índice de la fila a actualizar
+        row_index = user_row.index[0] + 1  # Las filas en Google Sheets empiezan desde 1
+        
+        # Crear el cuerpo de la solicitud con los nuevos datos
+        updated_data = {
+            "range": f"A{row_index}:Z{row_index}",
+            "values": [user_row.iloc[0].tolist()]
+        }
+        
+        # Actualizar el estado en la columna correspondiente
+        updated_data["values"][0][headers.index("estado")] = new_state
+        
+        # Enviar la solicitud POST para actualizar la fila
+        response = requests.put(url, json=updated_data)
+        if response.status_code == 200:
+            st.success(f"✅ Estado actualizado correctamente a **{new_state}** para {dni}")
+        else:
+            st.error(f"❌ Error al actualizar el estado: {response.text}")
     else:
-        st.error(f"❌ Error al actualizar el estado: {response.text}")
+        st.error("No se encontraron datos para actualizar.")
 
 # Mostrar detalles del usuario con opción para editar estado
 def show_user_details(user):
