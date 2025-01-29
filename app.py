@@ -1,14 +1,6 @@
 import streamlit as st
-import bcrypt
 import requests
 import pandas as pd
-
-# Configurar contraseña encriptada
-hashed_password = bcrypt.hashpw("perupaysergiorequena".encode('utf-8'), bcrypt.gensalt())
-
-# Función para verificar credenciales
-def check_credentials(username, password):
-    return username == "administrador" and bcrypt.checkpw(password.encode('utf-8'), hashed_password)
 
 # Función para obtener datos de la API
 def fetch_data():
@@ -34,7 +26,7 @@ def fetch_data():
         st.error(f"Error en la solicitud: {e}")
         return pd.DataFrame()
 
-# Función para actualizar el estado en Google Sheets (usando el formato adecuado)
+# Función para actualizar el estado en Google Sheets
 def update_user_state(dni, new_state):
     url = "https://apisheetsdb.vercel.app/api/sheets"  # URL correcta de la API
     
@@ -52,9 +44,9 @@ def update_user_state(dni, new_state):
         # Crear el cuerpo de la solicitud con los nuevos datos
         updated_data = {
             "action": "update",
-            "sheetId": "1GNHtJRX8LpvxYLjpYK780y6DwKmPcahbbmfJJUgX_MI",  # Reemplaza con tu ID de hoja
-            "range": f"A{row_index}:Z{row_index}",
-            "values": [user_row.iloc[0].tolist()]
+            "sheetId": "1y1PeiMI03LG3LKFiykCpSgAeRQL3mFQme3xbYzVxVso",  # ID de la hoja correcto
+            "range": f"'Hoja 1'!A{row_index}:O{row_index}",  # Rango específico de la fila
+            "values": [user_row.iloc[0].tolist()]  # Mantener los datos existentes, pero cambiar solo el estado
         }
         
         # Actualizar el estado en la columna correspondiente
